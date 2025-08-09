@@ -319,12 +319,13 @@ void IRAM_ATTR cerberos() {
 }
 
 void IRAM_ATTR __wrap_xt_unhandled_exception(void *frame) {
+    __real_xt_unhandled_exception(frame);
     task_info_t *task_info = get_task_info();
     if (task_info && task_info->pid) {
         // We can do this because we are running in ISR context, not the task context.
         vTaskSuspend(NULL);
         vTaskDelete(NULL);
-        esp_rom_printf("Task %u caused an unhandled exception, Cerberos will deal with it\n", task_info->pid);
+        esp_rom_printf("Task %u caused an unhandled exception, Cerberos will deal with it %u\n", task_info->pid);
 
         // Send task off to think about what it did until its timeslice runs out
         __asm__ volatile("csrw mepc, %0\n\t" // Set return address
@@ -333,7 +334,6 @@ void IRAM_ATTR __wrap_xt_unhandled_exception(void *frame) {
                          : "r"(cerberos)
                          : "t0", "memory");
     }
-    __real_xt_unhandled_exception(frame);
 }
 
 static void elf_task(task_info_t *task_info) {

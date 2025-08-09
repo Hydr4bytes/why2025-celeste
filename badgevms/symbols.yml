@@ -1026,6 +1026,7 @@ simple_function_extern:
   - __truncsfhf2
   - __udivdi3
   - __umoddi3
+  - __ledf2
 
 simple_object:
 

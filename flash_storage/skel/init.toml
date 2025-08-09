@@ -28,3 +28,11 @@ restart_on_failure = false
 stack_size = 8192
 start_delay = 30
 args = []
+
+[[apps]]
+name = "celeste"
+path = "FLASH0:[BADGEVMS.APPS.celeste]celeste.elf"
+restart_on_failure = false
+stack_size = 8192
+start_delay = 5
+args = []
