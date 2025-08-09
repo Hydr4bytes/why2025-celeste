@@ -267,7 +267,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 			int x1 = INT_ARG() - camera_x;
 			int y1 = INT_ARG() - camera_y;
 			int col = INT_ARG();
-			uint16_t realcolor = get_color(col);
+			int realcolor = get_color(col);
 
 			int w = (x1 - x0 + 1);
 			int h = (y1 - y0 + 1);
@@ -281,7 +281,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 			int r = INT_ARG();
 			int col = INT_ARG();
 
-			uint16_t realcolor = get_color(col);
+			int realcolor = get_color(col);
 			if (r >= 0) {
 				p8_circfill(cx, cy, r, realcolor);
 			}
@@ -292,7 +292,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 			int x1 = INT_ARG() - camera_x;
 			int y1 = INT_ARG() - camera_y;
 			int col = INT_ARG();
-			uint16_t realcolor = get_color(col);
+			int realcolor = get_color(col);
 
 			p8_line(x0, y0, x1, y1, realcolor);
 		} break;
@@ -344,15 +344,16 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     while ((now - last_step) >= STEP_RATE_IN_MILLISECONDS) {
         Celeste_P8_update();
+
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+
+		Celeste_P8_draw();
+
+		SDL_RenderPresent(renderer);
+
         last_step += STEP_RATE_IN_MILLISECONDS;
     }
-
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
-	Celeste_P8_draw();
-
-    SDL_RenderPresent(renderer);
 
     return SDL_APP_CONTINUE;
 }
@@ -478,40 +479,40 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     switch (event->type) {
         case SDL_EVENT_QUIT: return SDL_APP_SUCCESS;
 		case SDL_EVENT_KEY_DOWN: {
-			SDL_Scancode key_code = event->key.scancode;
+			SDL_Scancode scancode = event->key.scancode;
 
-			if (key_code == SDL_SCANCODE_ESCAPE || key_code == SDL_SCANCODE_Q) {
+			if (scancode == SDL_SCANCODE_ESCAPE || scancode == SDL_SCANCODE_Q) {
 				return SDL_APP_SUCCESS;
-			} else if (key_code == SDL_SCANCODE_R) {
+			} else if (scancode == SDL_SCANCODE_R) {
 				Celeste_P8__DEBUG();
-			} else if (key_code == SDL_SCANCODE_LEFT) {
+			} else if (scancode == SDL_SCANCODE_LEFT) {
 				buttons_state |= (1<<0);
-			} else if (key_code == SDL_SCANCODE_RIGHT) {
+			} else if (scancode == SDL_SCANCODE_RIGHT) {
 				buttons_state |= (1<<1);
-			} else if (key_code == SDL_SCANCODE_UP) {
+			} else if (scancode == SDL_SCANCODE_UP) {
 				buttons_state |= (1<<2);
-			} else if (key_code == SDL_SCANCODE_DOWN) {
+			} else if (scancode == SDL_SCANCODE_DOWN) {
 				buttons_state |= (1<<3);
-			} else if (key_code == SDL_SCANCODE_Z) {
+			} else if (scancode == SDL_SCANCODE_Z) {
 				buttons_state |= (1<<4);
-			} else if (key_code == SDL_SCANCODE_X) {
+			} else if (scancode == SDL_SCANCODE_X) {
 				buttons_state |= (1<<5);
 			}
 		} break;
 		case SDL_EVENT_KEY_UP: {
-			SDL_Scancode key_code = event->key.scancode;
+			SDL_Scancode scancode = event->key.scancode;
 
-			if (key_code == SDL_SCANCODE_LEFT) {
+			if (scancode == SDL_SCANCODE_LEFT) {
 				buttons_state &= ~(1<<0);
-			} else if (key_code == SDL_SCANCODE_RIGHT) {
+			} else if (scancode == SDL_SCANCODE_RIGHT) {
 				buttons_state &= ~(1<<1); // up
-			} else if (key_code == SDL_SCANCODE_UP) {
+			} else if (scancode == SDL_SCANCODE_UP) {
 				buttons_state &= ~(1<<2); // left
-			} else if (key_code == SDL_SCANCODE_DOWN) {
+			} else if (scancode == SDL_SCANCODE_DOWN) {
 				buttons_state &= ~(1<<3); // down
-			} else if (key_code == SDL_SCANCODE_Z) {
+			} else if (scancode == SDL_SCANCODE_Z) {
 				buttons_state &= ~(1<<4); // Z
-			} else if (key_code == SDL_SCANCODE_X) {
+			} else if (scancode == SDL_SCANCODE_X) {
 				buttons_state &= ~(1<<5); // X
 			}
 		} break;
