@@ -12,6 +12,7 @@
 
 #include "thirdparty/celeste.h"
 #include "bitmap.h"
+#include "font.h"
 #include "tilemap.h"
 
 #define SCALE 4
@@ -23,6 +24,7 @@
 
 #define STEP_RATE_IN_MILLISECONDS 33
 
+#if false
 __always_inline int
 __issignalingf (float x)
 {
@@ -31,9 +33,9 @@ __issignalingf (float x)
     return (ix & 0x7fc00000u) == 0x7fc00000u;
   return 2 * (ix ^ 0x00400000u) > 0xFF800000u;
 }
+#endif
 
 static SDL_Window *window = NULL;
-static SDL_Surface *screen = NULL;
 static SDL_Renderer *renderer = NULL;
 static Uint64 last_step;
 
@@ -60,8 +62,8 @@ static const SDL_Color base_palette[16] = {
 };
 static SDL_Color palette[16];
 
-static inline Uint32 get_color(char idx) {
-	const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGB565);
+static inline int get_color(char idx) {
+	const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_XRGB8888);
 
 	SDL_Color c = palette[idx%16];
 	return SDL_MapRGB(format, NULL, c.r,c.g,c.b);
@@ -86,11 +88,11 @@ void draw_tilemap(int16_t x, int16_t y, SDL_Texture* bitmap, int16_t start_x, in
 		h += y;
 		y = 0;
 	}
-	if (x + w > screen->w) {
-		w = screen->w - x;
+	if (x + w > W_WIDTH) {
+		w = W_WIDTH - x;
 	}
-	if (y + h > screen->h) {
-		h = screen->h - y;
+	if (y + h > W_HEIGHT) {
+		h = W_HEIGHT - y;
 	}
 
 	SDL_FRect src_rect = {start_x, start_y, w, h};
@@ -103,10 +105,10 @@ static void p8_line(int x0, int y0, int x1, int y1, unsigned char col) {
 	SDL_SetRenderDrawColor(renderer, col >> 16, (col >> 8) & 0xFF, col & 0xFF, 255);
 
 	#define CLAMP(v,min,max) v = v < min ? min : v >= max ? max-1 : v;
-	CLAMP(x0,0,screen->w);
-	CLAMP(y0,0,screen->h);
-	CLAMP(x1,0,screen->w);
-	CLAMP(y1,0,screen->h);
+	CLAMP(x0,0,W_WIDTH);
+	CLAMP(y0,0,W_HEIGHT);
+	CLAMP(x1,0,W_WIDTH);
+	CLAMP(y1,0,W_HEIGHT);
 
 	#undef CLAMP
   #define PLOT(x,y) do {                                                        \
@@ -190,7 +192,14 @@ static void p8_circfill(int cx, int cy, int r, int col) {
 }
 
 static void p8_print(const char* str, int x, int y, int col) {
-	// TODO
+	for (char c = *str; c; c = *(++str)) {
+		c &= 0x7F;
+		SDL_FRect srcrc = {8*(c%16), 8*(c/16)};
+		SDL_FRect dstrc = {x*SCALE, y*SCALE, SCALE, SCALE};
+		SDL_RenderTexture(renderer, font, &srcrc, &dstrc);
+
+		x += 4;
+	}
 }
 
 int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) { 
@@ -342,9 +351,6 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-	SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
-	SDL_RenderDebugText(renderer, 0, 0, "Celeste");
-
 	Celeste_P8_draw();
 
     SDL_RenderPresent(renderer);
@@ -428,7 +434,30 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 		printf("Failed to create texture: %s", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}
+	SDL_SetTextureScaleMode(gfx, SDL_SCALEMODE_NEAREST);
 	if(!SDL_UpdateTexture(gfx, NULL, celeste_gfx, 128 * sizeof(uint16_t))) {
+		printf("Failed to update texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
+
+	gfx = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STATIC, 128, 64);
+	if (!gfx) {
+		printf("Failed to create texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
+	SDL_SetTextureScaleMode(gfx, SDL_SCALEMODE_NEAREST);
+	if(!SDL_UpdateTexture(gfx, NULL, celeste_gfx, 128 * sizeof(uint16_t))) {
+		printf("Failed to update texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
+
+	font = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STATIC, 128, 85);
+	if (!font) {
+		printf("Failed to create texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
+	SDL_SetTextureScaleMode(font, SDL_SCALEMODE_NEAREST);
+	if(!SDL_UpdateTexture(font, NULL, celeste_font, 128 * sizeof(uint16_t))) {
 		printf("Failed to update texture: %s", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}

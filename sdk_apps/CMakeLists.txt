@@ -307,6 +307,7 @@ build_app(celeste
     SOURCES
      thirdparty/celeste.c
      thirdparty/celeste.h
+     font.h
      bitmap.h
      tilemap.h
      main.c
