@@ -313,7 +313,6 @@ build_app(celeste
      main.c
     LIBRARIES
      sdl3
-
 )
 
 get_property(SDK_APP_ELFS GLOBAL PROPERTY SDK_APP_ELFS)

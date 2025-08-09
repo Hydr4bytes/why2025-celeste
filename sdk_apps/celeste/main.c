@@ -196,10 +196,11 @@ static void p8_circfill(int cx, int cy, int r, int col) {
 static void p8_print(const char* str, int x, int y, int col) {
 	for (char c = *str; c; c = *(++str)) {
 		c &= 0x7F;
-		SDL_FRect srcrc = {8*(c%16), 8*(c/16)};
-		SDL_FRect dstrc = {x*SCALE, y*SCALE, SCALE, SCALE};
-		SDL_RenderTexture(renderer, font, &srcrc, &dstrc);
 
+		SDL_FRect srcrc = {8*(c%16), 8*(c/16), 8, 8};
+		SDL_FRect dstrc = {x*SCALE, y*SCALE, 8 * SCALE, 8 * SCALE};
+
+		SDL_RenderTexture(renderer, font, &srcrc, &dstrc);
 		x += 4;
 	}
 }
@@ -493,9 +494,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				buttons_state |= (1<<2);
 			} else if (scancode == SDL_SCANCODE_DOWN) {
 				buttons_state |= (1<<3);
-			} else if (scancode == SDL_SCANCODE_Z) {
-				buttons_state |= (1<<4);
 			} else if (scancode == SDL_SCANCODE_X) {
+				buttons_state |= (1<<4);
+			} else if (scancode == SDL_SCANCODE_C) {
 				buttons_state |= (1<<5);
 			}
 		} break;
@@ -510,10 +511,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				buttons_state &= ~(1<<2); // left
 			} else if (scancode == SDL_SCANCODE_DOWN) {
 				buttons_state &= ~(1<<3); // down
-			} else if (scancode == SDL_SCANCODE_Z) {
-				buttons_state &= ~(1<<4); // Z
 			} else if (scancode == SDL_SCANCODE_X) {
-				buttons_state &= ~(1<<5); // X
+				buttons_state &= ~(1<<4); // X
+			} else if (scancode == SDL_SCANCODE_C) {
+				buttons_state &= ~(1<<5); // C
 			}
 		} break;
         default: break;
