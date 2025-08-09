@@ -15,7 +15,7 @@
 #include "font.h"
 #include "tilemap.h"
 
-#define SCALE 4
+#define SCALE 3
 
 #define FB_WIDTH  (128 * SCALE)
 #define FB_HEIGHT (128 * SCALE)
@@ -24,7 +24,7 @@
 
 #define STEP_RATE_IN_MILLISECONDS 33
 
-#if false
+#if true
 __always_inline int
 __issignalingf (float x)
 {
@@ -41,6 +41,8 @@ static Uint64 last_step;
 
 static SDL_Texture *gfx = NULL;
 static SDL_Texture *font = NULL;
+
+static Uint16 buttons_state = 0;
 
 static const SDL_Color base_palette[16] = {
 	{0x00, 0x00, 0x00},
@@ -238,7 +240,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 		case CELESTE_P8_BTN: { //btn(b)
 			int b = INT_ARG();
 			//assert(b >= 0 && b <= 5);
-			RET_BOOL(false);
+			RET_BOOL(buttons_state & (1 << b));
 		} break;
 		case CELESTE_P8_PAL: { //pal(a,b)
 			int a = INT_ARG();
@@ -340,9 +342,6 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     unsigned      j;
     int           ct;
 
-    // run game logic if we're at or past the time to run it.
-    // if we're _really_ behind the time to run it, run it
-    // several times.
     while ((now - last_step) >= STEP_RATE_IN_MILLISECONDS) {
         Celeste_P8_update();
         last_step += STEP_RATE_IN_MILLISECONDS;
@@ -478,6 +477,44 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     switch (event->type) {
         case SDL_EVENT_QUIT: return SDL_APP_SUCCESS;
+		case SDL_EVENT_KEY_DOWN: {
+			SDL_Scancode key_code = event->key.scancode;
+
+			if (key_code == SDL_SCANCODE_ESCAPE || key_code == SDL_SCANCODE_Q) {
+				return SDL_APP_SUCCESS;
+			} else if (key_code == SDL_SCANCODE_R) {
+				Celeste_P8__DEBUG();
+			} else if (key_code == SDL_SCANCODE_LEFT) {
+				buttons_state |= (1<<0);
+			} else if (key_code == SDL_SCANCODE_RIGHT) {
+				buttons_state |= (1<<1);
+			} else if (key_code == SDL_SCANCODE_UP) {
+				buttons_state |= (1<<2);
+			} else if (key_code == SDL_SCANCODE_DOWN) {
+				buttons_state |= (1<<3);
+			} else if (key_code == SDL_SCANCODE_Z) {
+				buttons_state |= (1<<4);
+			} else if (key_code == SDL_SCANCODE_X) {
+				buttons_state |= (1<<5);
+			}
+		} break;
+		case SDL_EVENT_KEY_UP: {
+			SDL_Scancode key_code = event->key.scancode;
+
+			if (key_code == SDL_SCANCODE_LEFT) {
+				buttons_state &= ~(1<<0);
+			} else if (key_code == SDL_SCANCODE_RIGHT) {
+				buttons_state &= ~(1<<1); // up
+			} else if (key_code == SDL_SCANCODE_UP) {
+				buttons_state &= ~(1<<2); // left
+			} else if (key_code == SDL_SCANCODE_DOWN) {
+				buttons_state &= ~(1<<3); // down
+			} else if (key_code == SDL_SCANCODE_Z) {
+				buttons_state &= ~(1<<4); // Z
+			} else if (key_code == SDL_SCANCODE_X) {
+				buttons_state &= ~(1<<5); // X
+			}
+		} break;
         default: break;
     }
     return SDL_APP_CONTINUE;
