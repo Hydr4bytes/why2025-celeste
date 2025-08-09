@@ -37,8 +37,8 @@ static SDL_Surface *screen = NULL;
 static SDL_Renderer *renderer = NULL;
 static Uint64 last_step;
 
-static SDL_Surface *gfx = NULL;
-static SDL_Surface *font = NULL;
+static SDL_Texture *gfx = NULL;
+static SDL_Texture *font = NULL;
 
 static const SDL_Color base_palette[16] = {
 	{0x00, 0x00, 0x00},
@@ -61,7 +61,7 @@ static const SDL_Color base_palette[16] = {
 static SDL_Color palette[16];
 
 static inline Uint32 get_color(char idx) {
-	const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(screen->format);
+	const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGB565);
 
 	SDL_Color c = palette[idx%16];
 	return SDL_MapRGB(format, NULL, c.r,c.g,c.b);
@@ -75,7 +75,7 @@ static int get_tile_flag(int tile, int flag) {
 	return tile < sizeof(tile_flags)/sizeof(*tile_flags) && (tile_flags[tile] & (1 << flag)) != 0;
 }
 
-void draw_tilemap(int16_t x, int16_t y, SDL_Surface* bitmap, int16_t start_x, int16_t start_y,  int16_t w, int16_t h) {
+void draw_tilemap(int16_t x, int16_t y, SDL_Texture* bitmap, int16_t start_x, int16_t start_y,  int16_t w, int16_t h) {
 	if (x < 0) {
 		start_x -= x;
 		w += x;
@@ -93,10 +93,10 @@ void draw_tilemap(int16_t x, int16_t y, SDL_Surface* bitmap, int16_t start_x, in
 		h = screen->h - y;
 	}
 
-	SDL_Rect src_rect = {start_x, start_y, w, h};
-	SDL_Rect dst_rect = {x*SCALE, y*SCALE, w*SCALE, h*SCALE};
+	SDL_FRect src_rect = {start_x, start_y, w, h};
+	SDL_FRect dst_rect = {x*SCALE, y*SCALE, w*SCALE, h*SCALE};
 
-	SDL_BlitSurface(bitmap, &src_rect, screen, &dst_rect);
+	SDL_RenderTexture(renderer, bitmap, &src_rect, &dst_rect);
 }
 
 static void p8_line(int x0, int y0, int x1, int y1, unsigned char col) {
@@ -223,7 +223,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 			(void)rows;
 
 			if (sprite >= 0) {
-				//draw_tilemap(x-camera_x, y-camera_y, celeste_gfx, 8*(sprite % 16), 8*(sprite / 16), 8, 8);
+				draw_tilemap(x-camera_x, y-camera_y, gfx, 8*(sprite % 16), 8*(sprite / 16), 8, 8);
 			}
 		} break;
 		case CELESTE_P8_BTN: { //btn(b)
@@ -312,7 +312,7 @@ int pico8emu(CELESTE_P8_CALLBACK_TYPE call, ...) {
 					int tile = tilemap_data[x + mx + (y + my)*128];
 					//hack
 					if (mask == 0 || (mask == 4 && tile_flags[tile] == 4) || get_tile_flag(tile, mask != 4 ? mask-1 : mask)) {
-						//draw_tilemap((tx+x*8 - camera_x), (ty+y*8 - camera_y), celeste_gfx, 8*(tile % 16), 8*(tile / 16), 8, 8);
+						draw_tilemap((tx+x*8 - camera_x), (ty+y*8 - camera_y), gfx, 8*(tile % 16), 8*(tile / 16), 8, 8);
 					}
 				}
 			}
@@ -339,12 +339,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         last_step += STEP_RATE_IN_MILLISECONDS;
     }
 
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
 	SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
 	SDL_RenderDebugText(renderer, 0, 0, "Celeste");
 
-	//Celeste_P8_draw();
+	Celeste_P8_draw();
 
     SDL_RenderPresent(renderer);
 
@@ -422,6 +423,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         }
     }
 
+	gfx = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STATIC, 128, 64);
+	if (!gfx) {
+		printf("Failed to create texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
+	if(!SDL_UpdateTexture(gfx, NULL, celeste_gfx, 128 * sizeof(uint16_t))) {
+		printf("Failed to update texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
 
 	printf("Celeste starting...\n");
 
